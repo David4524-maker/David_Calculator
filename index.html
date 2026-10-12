@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>David Calculator</title>
+<style>
+  :root {
+    --calc-bg: #808080; --calc-border: #4b5563;
+    --display-bg: #1e3a8a; --display-fg: #ffffff;
+    --num-bg: #dc2626; --num-fg: #ffffff;
+    --op-bg: #16a34a; --op-fg: #ffffff;
+    --fn-bg: #374151; --fn-fg: #ffffff;
+    --sci-bg: #4b5563; --sci-fg: #ffffff;
+    --radius: 12px; --btn-radius: 10px;
+    --page-bg: #0c0f17; --panel-bg: #1a2234;
+    --panel-fg: #e5e7eb; --panel-muted: #94a3b8;
+    --accent: #3b82f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 Helvetica, Arial, sans-serif;
+    background: var(--page-bg); color: var(--panel-fg);
+    min-height: 100vh; display: flex; justify-content: center;
+    align-items: flex-start; padding: 24px 16px;
+    transition: background 0.3s;
+  }
+  .app {
+    width: 100%; max-width: 460px;
+    display: flex; flex-direction: column; gap: 16px;
+    transition: max-width 0.35s ease;
+  }
+  .app.wide { max-width: 580px; }
+
+  /* HEADER */
+  .header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px; background: var(--panel-bg);
+    border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .logo {
+    flex-shrink: 0; width: 56px; height: 56px;
+    background: #7a7a7a; border-radius: 14px; padding: 5px;
+    display: flex; flex-direction: column; gap: 4px;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2);
+  }
+  .logo-screen {
+    height: 20px; background: #1e3fae;
+    border-radius: 8px 8px 4px 4px;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.15);
+  }
+  .logo-bottom { flex: 1; display: flex; gap: 4px; }
+  .logo-buttons {
+    flex: 1; display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr); gap: 3px;
+  }
+  .logo-btn {
+    background: #e01c1c; border-radius: 3px;
+    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.2);
+  }
+  .logo-bar { width: 10px; background: #1e88e5; border-radius: 3px; }
+  .title-block { flex: 1; min-width: 0; }
+  .title-block h1 {
+    font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
+    color: var(--panel-fg); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .title-block p {
+    font-size: 11px; color: var(--panel-muted); margin-top: 2px;
+  }
+
+  .header-actions {
+    display: flex; gap: 6px; flex-shrink: 0;
+  }
+  .icon-btn {
+    background: var(--accent); color: white;
+    border: none; border-radius: 10px;
+    padding: 10px 11px; font-size: 15px;
+    cursor: pointer; font-family: inherit;
+    transition: filter 0.15s, transform 0.1s;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.25);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .icon-btn:hover  { filter: brightness(1.1); }
+  .icon-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.25); }
+  .icon-btn.saved  { background: #16a34a; }
+  .icon-btn.rename { background: #8b5cf6; }
+  .icon-btn.rename:hover { filter: brightness(1.15); }
+
+  /* CONTROLES */
+  .controls { display: flex; flex-direction: column; gap: 8px; }
+  .control-row { display: flex; gap: 8px; }
+  .control-row label {
+    font-size: 12px; color: var(--panel-muted);
+    align-self: center; min-width: 44px;
+  }
+  select {
+    flex: 1; background: var(--page-bg); color: var(--panel-fg);
+    border: 1px solid var(--calc-border); border-radius: 8px;
+    padding: 7px 10px; font-size: 13px; outline: none;
+    cursor: pointer; font-family: inherit;
+  }
+  select:focus { border-color: var(--accent); }
+
+  /* PANEL CUSTOM */
+  .custom-panel {
+    display: none; background: var(--panel-bg); border-radius: 14px;
+    padding: 14px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: slideDown 0.25s ease-out;
+  }
+  .custom-panel.open { display: block; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .custom-panel h3 {
+    font-size: 13px; font-weight: 600; margin-bottom: 10px;
+    color: var(--panel-fg);
+  }
+  .color-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px 12px; margin-bottom: 12px;
+  }
+  .color-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11.5px; color: var(--panel-muted);
+  }
+  .color-item input[type="color"] {
+    width: 30px; height: 30px; border: none; border-radius: 8px;
+    background: transparent; cursor: pointer; padding: 0;
+  }
+  .color-item input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .color-item input[type="color"]::-webkit-color-swatch {
+    border: 2px solid var(--calc-border); border-radius: 8px;
+  }
+  .range-row {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11.5px; color: var(--panel-muted); margin-bottom: 8px;
+  }
+  .range-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .range-row .range-val {
+    min-width: 34px; text-align: right; color: var(--panel-fg);
+    font-variant-numeric: tabular-nums;
+  }
+  .panel-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .panel-actions button {
+    flex: 1; padding: 8px 12px; border: none; border-radius: 8px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: opacity 0.15s, transform 0.1s;
+  }
+  .panel-actions button:hover  { opacity: 0.9; }
+  .panel-actions button:active { transform: scale(0.97); }
+  .btn-primary   { background: var(--accent); color: white; }
+  .btn-secondary { background: var(--calc-border); color: white; }
+
+  /* CALCULADORA */
+  .calculator {
+    background: var(--calc-bg); border-radius: var(--radius);
+    padding: 14px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.55),
+                inset 0 -3px 0 rgba(0,0,0,0.15);
+    display: flex; flex-direction: column; gap: 12px;
+    transition: background 0.3s, border-radius 0.3s;
+  }
+  .display {
+    background: var(--display-bg); color: var(--display-fg);
+    border-radius: calc(var(--radius) - 2px);
+    padding: 14px 18px; text-align: right; overflow: hidden;
+    box-shadow: inset 0 3px 10px rgba(0,0,0,0.35);
+    transition: background 0.3s, color 0.3s;
+  }
+  .display .expression {
+    font-size: 13px; opacity: 0.75; height: 18px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums; letter-spacing: 0.5px;
+  }
+  .display .result {
+    font-size: 36px; font-weight: 700; line-height: 1.15;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.5px;
+  }
+  .buttons {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .buttons.sci-buttons { grid-template-columns: repeat(5, 1fr); }
+  .btn {
+    border: none; border-radius: var(--btn-radius);
+    padding: 15px 0; font-size: 19px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    transition: filter 0.15s, transform 0.08s,
+                background 0.3s, border-radius 0.3s;
+    user-select: none; box-shadow: 0 3px 0 rgba(0,0,0,0.25);
+    -webkit-tap-highlight-color: transparent;
+    min-height: 52px;
+  }
+  .btn:hover  { filter: brightness(1.1); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.25); }
+  .btn-num { background: var(--num-bg); color: var(--num-fg); }
+  .btn-op  { background: var(--op-bg);  color: var(--op-fg);  }
+  .btn-fn  { background: var(--fn-bg);  color: var(--fn-fg);  }
+  .btn-sci { background: var(--sci-bg); color: var(--sci-fg); font-size: 15px; }
+  .btn-eq-wide {
+    grid-column: span 5; font-size: 22px; padding: 14px 0;
+  }
+  .btn-deg.active { background: var(--accent); color: white; }
+
+  .footer {
+    text-align: center; font-size: 11px; color: var(--panel-muted);
+    padding: 4px 0 8px;
+  }
+  .footer kbd {
+    background: var(--panel-bg); border: 1px solid var(--calc-border);
+    border-radius: 4px; padding: 1px 5px; font-family: monospace;
+    font-size: 10px;
+  }
+
+  /* MODALES */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: none; justify-content: center; align-items: center;
+    z-index: 100; backdrop-filter: blur(4px);
+    padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--panel-bg);
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: 22px 22px 18px;
+    width: 400px; max-width: 100%;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+    display: flex; flex-direction: column; gap: 14px;
+    animation: modalIn 0.22s ease-out;
+  }
+  .modal-box.rename-box { border-color: #8b5cf6; }
+  @keyframes modalIn {
+    from { transform: scale(0.92); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+  .modal-box h3 {
+    color: var(--panel-fg); font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .modal-box .field-label {
+    font-size: 12px; color: var(--panel-muted);
+    margin-bottom: -8px;
+  }
+  .modal-box input[type="text"] {
+    background: var(--page-bg);
+    border: 1px solid var(--calc-border);
+    border-radius: 8px;
+    padding: 11px 13px;
+    color: var(--panel-fg);
+    outline: none; font-family: inherit; font-size: 14px;
+    transition: border-color 0.15s;
+  }
+  .modal-box input[type="text"]:focus { border-color: var(--accent); }
+  .modal-box.rename-box input[type="text"]:focus { border-color: #8b5cf6; }
+  .modal-hint {
+    font-size: 11px; color: var(--panel-muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .modal-hint code {
+    background: var(--page-bg); border-radius: 4px;
+    padding: 1px 6px; font-size: 11px;
+  }
+  .modal-buttons {
+    display: flex; gap: 8px; justify-content: flex-end;
+    margin-top: 4px;
+  }
+  .modal-buttons button {
+    padding: 9px 18px; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: filter 0.15s, transform 0.1s;
+  }
+  .modal-buttons button:hover  { filter: brightness(1.1); }
+  .modal-buttons button:active { transform: scale(0.97); }
+  .btn-rename { background: #8b5cf6; color: white; }
+
+  @media (max-width: 420px) {
+    .color-grid { grid-template-columns: 1fr; }
+    .display .result { font-size: 28px; }
+    .btn { font-size: 16px; padding: 12px 0; min-height: 46px; }
+    .btn-sci { font-size: 12px; }
+    .title-block h1 { font-size: 15px; }
+    .icon-btn { padding: 9px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo" id="logoEl" title="David Calculator">
+      <div class="logo-screen"></div>
+      <div class="logo-bottom">
+        <div class="logo-buttons">
+          <div class="logo-btn"></div><div class="logo-btn"></div><div class="logo-btn"></div>
+          <div class="logo-btn"></div><div class="logo-btn"></div><div class="logo-btn"></div>
+        </div>
+        <div class="logo-bar"></div>
+      </div>
+    </div>
+    <div class="title-block">
+      <h1 id="appTitle">David Calculator</h1>
+      <p id="appSubtitle">Calculadora personalizable</p>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn rename" id="btnRename" title="Renombrar calculadora">✏️</button>
+      <button class="icon-btn" id="btnDownload" title="Descargar HTML">💾</button>
+    </div>
+  </div>
+
+  <!-- CONTROLES -->
+  <div class="controls">
+    <div class="control-row">
+      <label id="lblMode">🧮</label>
+      <select id="modeSelect">
+        <option value="normal">Normal</option>
+        <option value="scientific">Científica</option>
+      </select>
+    </div>
+    <div class="control-row">
+      <label id="lblLang">🌐</label>
+      <select id="langSelect">
+        <option value="es">Español</option>
+        <option value="en">English</option>
+        <option value="pt">Português</option>
+        <option value="ja">日本語</option>
+        <option value="ru">Русский</option>
+        <option value="fr">Français</option>
+      </select>
+    </div>
+    <div class="control-row">
+      <label id="lblTheme">🎨</label>
+      <select id="themeSelect">
+        <option value="default">Predeterminado</option>
+        <option value="apple">Apple</option>
+        <option value="android">Android</option>
+        <option value="linux">Linux</option>
+        <option value="custom">Personalizado</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- PANEL CUSTOM -->
+  <div class="custom-panel" id="customPanel">
+    <h3 id="customTitle">Personalizar interfaz</h3>
+    <div class="color-grid">
+      <label class="color-item"><input type="color" id="cCalcBg"><span id="lblCalcBg">Fondo</span></label>
+      <label class="color-item"><input type="color" id="cCalcBorder"><span id="lblCalcBorder">Borde</span></label>
+      <label class="color-item"><input type="color" id="cDisplayBg"><span id="lblDisplayBg">Pantalla fondo</span></label>
+      <label class="color-item"><input type="color" id="cDisplayFg"><span id="lblDisplayFg">Pantalla texto</span></label>
+      <label class="color-item"><input type="color" id="cNumBg"><span id="lblNumBg">Números fondo</span></label>
+      <label class="color-item"><input type="color" id="cNumFg"><span id="lblNumFg">Números texto</span></label>
+      <label class="color-item"><input type="color" id="cOpBg"><span id="lblOpBg">Operaciones fondo</span></label>
+      <label class="color-item"><input type="color" id="cOpFg"><span id="lblOpFg">Operaciones texto</span></label>
+      <label class="color-item"><input type="color" id="cFnBg"><span id="lblFnBg">Funciones fondo</span></label>
+      <label class="color-item"><input type="color" id="cFnFg"><span id="lblFnFg">Funciones texto</span></label>
+      <label class="color-item"><input type="color" id="cSciBg"><span id="lblSciBg">Científicas fondo</span></label>
+      <label class="color-item"><input type="color" id="cSciFg"><span id="lblSciFg">Científicas texto</span></label>
+    </div>
+    <div class="range-row">
+      <span id="lblRadius">Redondeo</span>
+      <input type="range" id="cRadius" min="0" max="40" value="12">
+      <span class="range-val" id="radiusVal">12px</span>
+    </div>
+    <div class="panel-actions">
+      <button class="btn-secondary" id="btnReset">↺ Restablecer</button>
+      <button class="btn-primary" id="btnSave">💾 Guardar</button>
+    </div>
+  </div>
+
+  <!-- CALCULADORA -->
+  <div class="calculator" id="calculator">
+    <div class="display">
+      <div class="expression" id="expression">&nbsp;</div>
+      <div class="result" id="result">0</div>
+    </div>
+
+    <div class="buttons" id="normalButtons">
+      <button class="btn btn-fn" data-action="clear">AC</button>
+      <button class="btn btn-fn" data-action="back">⌫</button>
+      <button class="btn btn-fn" data-action="percent">%</button>
+      <button class="btn btn-op" data-action="op" data-op="/">÷</button>
+
+      <button class="btn btn-num" data-action="num" data-num="7">7</button>
+      <button class="btn btn-num" data-action="num" data-num="8">8</button>
+      <button class="btn btn-num" data-action="num" data-num="9">9</button>
+      <button class="btn btn-op" data-action="op" data-op="*">×</button>
+
+      <button class="btn btn-num" data-action="num" data-num="4">4</button>
+      <button class="btn btn-num" data-action="num" data-num="5">5</button>
+      <button class="btn btn-num" data-action="num" data-num="6">6</button>
+      <button class="btn btn-op" data-action="op" data-op="-">−</button>
+
+      <button class="btn btn-num" data-action="num" data-num="1">1</button>
+      <button class="btn btn-num" data-action="num" data-num="2">2</button>
+      <button class="btn btn-num" data-action="num" data-num="3">3</button>
+      <button class="btn btn-op" data-action="op" data-op="+">+</button>
+
+      <button class="btn btn-fn" data-action="sign">±</button>
+      <button class="btn btn-num" data-action="num" data-num="0">0</button>
+      <button class="btn btn-num" data-action="num" data-num=".">.</button>
+      <button class="btn btn-op" data-action="equals">=</button>
+    </div>
+
+    <div class="buttons sci-buttons" id="sciButtons" style="display:none">
+      <button class="btn btn-fn" data-action="clear">AC</button>
+      <button class="btn btn-fn" data-action="back">⌫</button>
+      <button class="btn btn-fn" data-action="percent">%</button>
+      <button class="btn btn-fn btn-deg active" data-action="toggleDeg">DEG</button>
+      <button class="btn btn-sci" data-action="const" data-const="pi">π</button>
+
+      <button class="btn btn-sci" data-action="fn" data-fn="sin">sin</button>
+      <button class="btn btn-sci" data-action="fn" data-fn="cos">cos</button>
+      <button class="btn btn-sci" data-action="fn" data-fn="tan">tan</button>
+      <button class="btn btn-sci" data-action="const" data-const="e">e</button>
+      <button class="btn btn-sci" data-action="paren" data-paren="open">(</button>
+
+      <button class="btn btn-sci" data-action="fn" data-fn="ln">ln</button>
+      <button class="btn btn-sci" data-action="fn" data-fn="log">log</button>
+      <button class="btn btn-sci" data-action="fn" data-fn="sqrt">√</button>
+      <button class="btn btn-sci" data-action="fn" data-fn="x2">x²</button>
+      <button class="btn btn-sci" data-action="paren" data-paren="close">)</button>
+
+      <button class="btn btn-op"  data-action="op" data-op="^">xʸ</button>
+      <button class="btn btn-sci" data-action="fn" data-fn="fact">x!</button>
+      <button class="btn btn-sci" data-action="fn" data-fn="inv">1/x</button>
+      <button class="btn btn-sci" data-action="fn" data-fn="abs">|x|</button>
+      <button class="btn btn-fn"  data-action="sign">±</button>
+
+      <button class="btn btn-num" data-action="num" data-num="7">7</button>
+      <button class="btn btn-num" data-action="num" data-num="8">8</button>
+      <button class="btn btn-num" data-action="num" data-num="9">9</button>
+      <button class="btn btn-op"  data-action="op" data-op="/">÷</button>
+      <button class="btn btn-op"  data-action="op" data-op="*">×</button>
+
+      <button class="btn btn-num" data-action="num" data-num="4">4</button>
+      <button class="btn btn-num" data-action="num" data-num="5">5</button>
+      <button class="btn btn-num" data-action="num" data-num="6">6</button>
+      <button class="btn btn-op"  data-action="op" data-op="-">−</button>
+      <button class="btn btn-op"  data-action="op" data-op="+">+</button>
+
+      <button class="btn btn-num" data-action="num" data-num="1">1</button>
+      <button class="btn btn-num" data-action="num" data-num="2">2</button>
+      <button class="btn btn-num" data-action="num" data-num="3">3</button>
+      <button class="btn btn-num" data-action="num" data-num="0">0</button>
+      <button class="btn btn-num" data-action="num" data-num=".">.</button>
+
+      <button class="btn btn-op btn-eq-wide" data-action="equals">=</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span id="kbdHint">Teclado: <kbd>0-9</kbd> <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd>
+    <kbd>/</kbd> <kbd>(</kbd> <kbd>)</kbd> <kbd>Enter</kbd> <kbd>Esc</kbd> <kbd>⌫</kbd></span>
+  </div>
+
+</div>
+
+<!-- MODAL: RENOMBRAR -->
+<div class="modal-overlay" id="renameModal">
+  <div class="modal-box rename-box" role="dialog" aria-modal="true" aria-labelledby="rnTitle">
+    <h3 id="rnTitle">✏️ Renombrar calculadora</h3>
+    <div class="field-label" id="rnNameLabel">Nuevo nombre:</div>
+    <input type="text" id="renameNameInput" maxlength="60"
+           placeholder="Nombre de tu calculadora"
+           autocomplete="off" spellcheck="false">
+    <div class="modal-buttons">
+      <button class="btn-secondary" id="rnCancel">Cancelar</button>
+      <button class="btn-rename"    id="rnConfirm">✓ Guardar nombre</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DESCARGAR -->
+<div class="modal-overlay" id="downloadModal">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="dlTitle">
+    <h3 id="dlTitle">💾 Descargar calculadora</h3>
+    <div class="field-label" id="dlNameLabel">¿Qué nombre quieres ponerle?</div>
+    <input type="text" id="downloadNameInput" maxlength="60"
+           placeholder="Nombre de tu calculadora"
+           autocomplete="off" spellcheck="false">
+    <div class="modal-hint">
+      <span id="dlHintText">Se guardará como</span>
+      <code id="dlFilenamePreview">mi_calculadora.html</code>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-secondary" id="dlCancel">Cancelar</button>
+      <button class="btn-primary"   id="dlConfirm">⬇️ Descargar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   1. TRADUCCIONES
+   ================================================================ */
+const I18N = {
+  es: {
+    subtitle: "Calculadora personalizable",
+    mode: "🧮 Modo", modes: { normal: "Normal", scientific: "Científica" },
+    lang: "🌐 Idioma",
+    theme: "🎨 Interfaz",
+    themes: { default: "Predeterminado", apple: "Apple",
+              android: "Android", linux: "Linux", custom: "Personalizado" },
+    customTitle: "Personalizar interfaz",
+    calcBg: "Fondo", calcBorder: "Borde",
+    displayBg: "Pantalla fondo", displayFg: "Pantalla texto",
+    numBg: "Números fondo", numFg: "Números texto",
+    opBg: "Operaciones fondo", opFg: "Operaciones texto",
+    fnBg: "Funciones fondo", fnFg: "Funciones texto",
+    sciBg: "Científicas fondo", sciFg: "Científicas texto",
+    radius: "Redondeo",
+    reset: "↺ Restablecer", save: "💾 Guardar",
+    kbdHint: "Teclado:",
+    saved: "¡Interfaz guardada!",
+    errDivZero: "Error: división por cero",
+    errInvalid: "Error: operación inválida",
+    // Renombrar
+    renameBtnTitle: "Renombrar calculadora",
+    renameTitle: "✏️ Renombrar calculadora",
+    renameNameLabel: "Nuevo nombre:",
+    renameCancel: "Cancelar",
+    renameConfirm: "✓ Guardar nombre",
+    renameDone: "¡Nombre cambiado!",
+    renamePlaceholder: "Nombre de tu calculadora",
+    // Descargar
+    downloadBtnTitle: "Descargar HTML",
+    downloadTitle: "💾 Descargar calculadora",
+    downloadNameLabel: "¿Qué nombre quieres ponerle?",
+    downloadHintText: "Se guardará como",
+    downloadCancel: "Cancelar",
+    downloadConfirm: "⬇️ Descargar",
+    downloadDone: "¡Descargado!",
+    downloadNamePlaceholder: "Nombre de tu calculadora"
+  },
+  en: {
+    subtitle: "Customizable calculator",
+    mode: "🧮 Mode", modes: { normal: "Normal", scientific: "Scientific" },
+    lang: "🌐 Language", theme: "🎨 Interface",
+    themes: { default: "Default", apple: "Apple",
+              android: "Android", linux: "Linux", custom: "Custom" },
+    customTitle: "Customize interface",
+    calcBg: "Background", calcBorder: "Border",
+    displayBg: "Display bg", displayFg: "Display text",
+    numBg: "Numbers bg", numFg: "Numbers text",
+    opBg: "Operators bg", opFg: "Operators text",
+    fnBg: "Functions bg", fnFg: "Functions text",
+    sciBg: "Scientific bg", sciFg: "Scientific text",
+    radius: "Corner radius",
+    reset: "↺ Reset", save: "💾 Save",
+    kbdHint: "Keyboard:", saved: "Interface saved!",
+    errDivZero: "Error: division by zero", errInvalid: "Error: invalid operation",
+    renameBtnTitle: "Rename calculator",
+    renameTitle: "✏️ Rename calculator",
+    renameNameLabel: "New name:",
+    renameCancel: "Cancel",
+    renameConfirm: "✓ Save name",
+    renameDone: "Name changed!",
+    renamePlaceholder: "Your calculator name",
+    downloadBtnTitle: "Download HTML",
+    downloadTitle: "💾 Download calculator",
+    downloadNameLabel: "What name do you want to give it?",
+    downloadHintText: "It will be saved as",
+    downloadCancel: "Cancel",
+    downloadConfirm: "⬇️ Download",
+    downloadDone: "Downloaded!",
+    downloadNamePlaceholder: "Your calculator name"
+  },
+  pt: {
+    subtitle: "Calculadora personalizável",
+    mode: "🧮 Modo", modes: { normal: "Normal", scientific: "Científica" },
+    lang: "🌐 Idioma", theme: "🎨 Interface",
+    themes: { default: "Padrão", apple: "Apple",
+              android: "Android", linux: "Linux", custom: "Personalizado" },
+    customTitle: "Personalizar interface",
+    calcBg: "Fundo", calcBorder: "Borda",
+    displayBg: "Fundo do visor", displayFg: "Texto do visor",
+    numBg: "Fundo dos números", numFg: "Texto dos números",
+    opBg: "Fundo das operações", opFg: "Texto das operações",
+    fnBg: "Fundo das funções", fnFg: "Texto das funções",
+    sciBg: "Fundo científico", sciFg: "Texto científico",
+    radius: "Arredondamento",
+    reset: "↺ Restaurar", save: "💾 Salvar",
+    kbdHint: "Teclado:", saved: "Interface salva!",
+    errDivZero: "Erro: divisão por zero", errInvalid: "Erro: operação inválida",
+    renameBtnTitle: "Renomear calculadora",
+    renameTitle: "✏️ Renomear calculadora",
+    renameNameLabel: "Novo nome:",
+    renameCancel: "Cancelar",
+    renameConfirm: "✓ Salvar nome",
+    renameDone: "Nome alterado!",
+    renamePlaceholder: "Nome da sua calculadora",
+    downloadBtnTitle: "Baixar HTML",
+    downloadTitle: "💾 Baixar calculadora",
+    downloadNameLabel: "Que nome você quer dar?",
+    downloadHintText: "Será salvo como",
+    downloadCancel: "Cancelar",
+    downloadConfirm: "⬇️ Baixar",
+    downloadDone: "Baixado!",
+    downloadNamePlaceholder: "Nome da sua calculadora"
+  },
+  ja: {
+    subtitle: "カスタマイズ可能な電卓",
+    mode: "🧮 モード", modes: { normal: "通常", scientific: "科学" },
+    lang: "🌐 言語", theme: "🎨 インターフェース",
+    themes: { default: "デフォルト", apple: "Apple",
+              android: "Android", linux: "Linux", custom: "カスタム" },
+    customTitle: "インターフェースをカスタマイズ",
+    calcBg: "背景", calcBorder: "枠線",
+    displayBg: "ディスプレイ背景", displayFg: "ディスプレイ文字",
+    numBg: "数字ボタン背景", numFg: "数字ボタン文字",
+    opBg: "演算子背景", opFg: "演算子文字",
+    fnBg: "機能ボタン背景", fnFg: "機能ボタン文字",
+    sciBg: "科学ボタン背景", sciFg: "科学ボタン文字",
+    radius: "角の丸み",
+    reset: "↺ リセット", save: "💾 保存",
+    kbdHint: "キーボード:", saved: "保存しました!",
+    errDivZero: "エラー: ゼロ除算", errInvalid: "エラー: 無効な操作",
+    renameBtnTitle: "電卓の名前を変更",
+    renameTitle: "✏️ 電卓の名前を変更",
+    renameNameLabel: "新しい名前:",
+    renameCancel: "キャンセル",
+    renameConfirm: "✓ 名前を保存",
+    renameDone: "名前を変更しました!",
+    renamePlaceholder: "電卓の名前",
+    downloadBtnTitle: "HTMLをダウンロード",
+    downloadTitle: "💾 電卓をダウンロード",
+    downloadNameLabel: "どんな名前にしますか?",
+    downloadHintText: "名前:",
+    downloadCancel: "キャンセル",
+    downloadConfirm: "⬇️ ダウンロード",
+    downloadDone: "ダウンロード完了!",
+    downloadNamePlaceholder: "電卓の名前"
+  },
+  ru: {
+    subtitle: "Настраиваемый калькулятор",
+    mode: "🧮 Режим", modes: { normal: "Обычный", scientific: "Научный" },
+    lang: "🌐 Язык", theme: "🎨 Интерфейс",
+    themes: { default: "По умолчанию", apple: "Apple",
+              android: "Android", linux: "Linux", custom: "Свой" },
+    customTitle: "Настроить интерфейс",
+    calcBg: "Фон", calcBorder: "Рамка",
+    displayBg: "Фон дисплея", displayFg: "Текст дисплея",
+    numBg: "Фон цифр", numFg: "Текст цифр",
+    opBg: "Фон операций", opFg: "Текст операций",
+    fnBg: "Фон функций", fnFg: "Текст функций",
+    sciBg: "Фон научных", sciFg: "Текст научных",
+    radius: "Закругление",
+    reset: "↺ Сброс", save: "💾 Сохранить",
+    kbdHint: "Клавиатура:", saved: "Сохранено!",
+    errDivZero: "Ошибка: деление на ноль", errInvalid: "Ошибка: неверная операция",
+    renameBtnTitle: "Переименовать калькулятор",
+    renameTitle: "✏️ Переименовать калькулятор",
+    renameNameLabel: "Новое имя:",
+    renameCancel: "Отмена",
+    renameConfirm: "✓ Сохранить имя",
+    renameDone: "Имя изменено!",
+    renamePlaceholder: "Имя вашего калькулятора",
+    downloadBtnTitle: "Скачать HTML",
+    downloadTitle: "💾 Скачать калькулятор",
+    downloadNameLabel: "Какое имя вы хотите дать?",
+    downloadHintText: "Будет сохранено как",
+    downloadCancel: "Отмена",
+    downloadConfirm: "⬇️ Скачать",
+    downloadDone: "Скачано!",
+    downloadNamePlaceholder: "Имя вашего калькулятора"
+  },
+  fr: {
+    subtitle: "Calculatrice personnalisable",
+    mode: "🧮 Mode", modes: { normal: "Normal", scientific: "Scientifique" },
+    lang: "🌐 Langue", theme: "🎨 Interface",
+    themes: { default: "Par défaut", apple: "Apple",
+              android: "Android", linux: "Linux", custom: "Personnalisé" },
+    customTitle: "Personnaliser l'interface",
+    calcBg: "Fond", calcBorder: "Bordure",
+    displayBg: "Fond de l'écran", displayFg: "Texte de l'écran",
+    numBg: "Fond des chiffres", numFg: "Texte des chiffres",
+    opBg: "Fond des opérations", opFg: "Texte des opérations",
+    fnBg: "Fond des fonctions", fnFg: "Texte des fonctions",
+    sciBg: "Fond scientifique", sciFg: "Texte scientifique",
+    radius: "Arrondi",
+    reset: "↺ Réinitialiser", save: "💾 Enregistrer",
+    kbdHint: "Clavier:", saved: "Interface enregistrée !",
+    errDivZero: "Erreur : division par zéro", errInvalid: "Erreur : opération invalide",
+    renameBtnTitle: "Renommer la calculatrice",
+    renameTitle: "✏️ Renommer la calculatrice",
+    renameNameLabel: "Nouveau nom :",
+    renameCancel: "Annuler",
+    renameConfirm: "✓ Enregistrer",
+    renameDone: "Nom modifié !",
+    renamePlaceholder: "Nom de votre calculatrice",
+    downloadBtnTitle: "Télécharger HTML",
+    downloadTitle: "💾 Télécharger la calculatrice",
+    downloadNameLabel: "Quel nom veux-tu lui donner ?",
+    downloadHintText: "Sera enregistré sous",
+    downloadCancel: "Annuler",
+    downloadConfirm: "⬇️ Télécharger",
+    downloadDone: "Téléchargé !",
+    downloadNamePlaceholder: "Nom de votre calculatrice"
+  }
+};
+
+/* ================================================================
+   2. TEMAS
+   ================================================================ */
+const THEMES = {
+  default: {
+    calcBg: '#808080', calcBorder: '#4b5563',
+    displayBg: '#1e3a8a', displayFg: '#ffffff',
+    numBg: '#dc2626', numFg: '#ffffff',
+    opBg: '#16a34a', opFg: '#ffffff',
+    fnBg: '#374151', fnFg: '#ffffff',
+    sciBg: '#4b5563', sciFg: '#ffffff',
+    radius: 12
+  },
+  apple: {
+    calcBg: '#000000', calcBorder: '#1f2937',
+    displayBg: '#000000', displayFg: '#ffffff',
+    numBg: '#333333', numFg: '#ffffff',
+    opBg: '#ff9500', opFg: '#ffffff',
+    fnBg: '#a5a5a5', fnFg: '#000000',
+    sciBg: '#1c1c1e', sciFg: '#ff9500',
+    radius: 28
+  },
+  android: {
+    calcBg: '#1f2937', calcBorder: '#374151',
+    displayBg: '#111827', displayFg: '#ffffff',
+    numBg: '#374151', numFg: '#ffffff',
+    opBg: '#3b82f6', opFg: '#ffffff',
+    fnBg: '#4b5563', fnFg: '#ffffff',
+    sciBg: '#0ea5e9', sciFg: '#ffffff',
+    radius: 18
+  },
+  linux: {
+    calcBg: '#0d0d0d', calcBorder: '#00ff00',
+    displayBg: '#000000', displayFg: '#00ff00',
+    numBg: '#1a1a1a', numFg: '#00ff00',
+    opBg: '#003300', opFg: '#00ff00',
+    fnBg: '#0d0d0d', fnFg: '#00ff00',
+    sciBg: '#0a2a0a', sciFg: '#00ff00',
+    radius: 4
+  }
+};
+
+/* ================================================================
+   3. ESTADO
+   ================================================================ */
+let currentLang    = 'es';
+let currentTheme   = 'default';
+let currentMode    = 'normal';
+let customColors   = { ...THEMES.default };
+let savedCustom    = null;
+
+let currentInput    = '0';
+let previousValue   = null;
+let pendingOperator = null;
+let shouldReset     = false;
+let lastExpression  = '';
+let degMode         = true;
+let parenStack      = [];
+
+const APP_NAME_KEY = 'dc_app_name';
+const DEFAULT_APP_NAME = 'David Calculator';
+
+/* ================================================================
+   4. APLICAR TEMA
+   ================================================================ */
+function applyThemeVars(c) {
+  const s = document.documentElement.style;
+  s.setProperty('--calc-bg',     c.calcBg);
+  s.setProperty('--calc-border', c.calcBorder);
+  s.setProperty('--display-bg',  c.displayBg);
+  s.setProperty('--display-fg',  c.displayFg);
+  s.setProperty('--num-bg',      c.numBg);
+  s.setProperty('--num-fg',      c.numFg);
+  s.setProperty('--op-bg',       c.opBg);
+  s.setProperty('--op-fg',       c.opFg);
+  s.setProperty('--fn-bg',       c.fnBg);
+  s.setProperty('--fn-fg',       c.fnFg);
+  s.setProperty('--sci-bg',      c.sciBg || c.fnBg);
+  s.setProperty('--sci-fg',      c.sciFg || c.fnFg);
+  s.setProperty('--radius',      c.radius + 'px');
+  s.setProperty('--btn-radius',  Math.max(2, c.radius - 2) + 'px');
+}
+
+function applyTheme(theme) {
+  const t = THEMES[theme];
+  if (t) applyThemeVars(t);
+}
+
+function syncColorInputs() {
+  const c = currentTheme === 'custom' ? customColors : THEMES[currentTheme];
+  if (!c) return;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('cCalcBg',     c.calcBg);
+  set('cCalcBorder', c.calcBorder);
+  set('cDisplayBg',  c.displayBg);
+  set('cDisplayFg',  c.displayFg);
+  set('cNumBg',      c.numBg);
+  set('cNumFg',      c.numFg);
+  set('cOpBg',       c.opBg);
+  set('cOpFg',       c.opFg);
+  set('cFnBg',       c.fnBg);
+  set('cFnFg',       c.fnFg);
+  set('cSciBg',      c.sciBg || c.fnBg);
+  set('cSciFg',      c.sciFg || c.fnFg);
+  document.getElementById('cRadius').value = c.radius;
+  document.getElementById('radiusVal').textContent = c.radius + 'px';
+}
+
+/* ================================================================
+   5. CALCULADORA
+   ================================================================ */
+const resultEl = document.getElementById('result');
+const exprEl   = document.getElementById('expression');
+const OP_SYM = { '+': ' + ', '-': ' − ', '*': ' × ', '/': ' ÷ ', '^': ' ^ ' };
+
+function formatNumber(n) {
+  if (n === null || n === undefined || !isFinite(n)) return String(n);
+  if (Number.isInteger(n) && Math.abs(n) < 1e15) return n.toString();
+  let s = Number(n.toPrecision(12)).toString();
+  if (s.length > 16) s = Number(n).toExponential(8);
+  return s;
+}
+
+function updateDisplay() {
+  resultEl.textContent = currentInput;
+  if (pendingOperator && previousValue !== null) {
+    exprEl.textContent = formatNumber(previousValue) + OP_SYM[pendingOperator];
+  } else if (lastExpression) {
+    exprEl.textContent = lastExpression;
+  } else {
+    exprEl.textContent = '\u00A0';
+  }
+  if (parenStack.length > 0) {
+    exprEl.textContent += '  ' + '('.repeat(parenStack.length);
+  }
+}
+
+function showError(msgKey) {
+  resultEl.textContent = I18N[currentLang][msgKey];
+  exprEl.textContent = '\u00A0';
+  currentInput = '0'; previousValue = null; pendingOperator = null;
+  shouldReset = true; lastExpression = ''; parenStack = [];
+}
+
+function inputNum(n) {
+  if (shouldReset) {
+    currentInput = '0'; shouldReset = false; lastExpression = '';
+  }
+  if (n === '.') {
+    if (!currentInput.includes('.')) currentInput += '.';
+  } else {
+    if (currentInput === '0') currentInput = n;
+    else currentInput += n;
+  }
+  if (currentInput.replace('-', '').replace('.', '').length > 15)
+    currentInput = currentInput.slice(0, -1);
+  updateDisplay();
+}
+
+function inputConst(name) {
+  if (shouldReset) { currentInput = '0'; shouldReset = false; lastExpression = ''; }
+  const v = name === 'pi' ? Math.PI : Math.E;
+  currentInput = formatNumber(v);
+  updateDisplay();
+}
+
+function clearAll() {
+  currentInput = '0'; previousValue = null; pendingOperator = null;
+  shouldReset = false; lastExpression = ''; parenStack = [];
+  updateDisplay();
+}
+
+function backspace() {
+  if (shouldReset) return;
+  if (currentInput.length <= 1 ||
+      (currentInput.length === 2 && currentInput.startsWith('-')))
+    currentInput = '0';
+  else
+    currentInput = currentInput.slice(0, -1);
+  updateDisplay();
+}
+
+function toggleSign() {
+  if (currentInput === '0') return;
+  if (currentInput.startsWith('-')) currentInput = currentInput.slice(1);
+  else currentInput = '-' + currentInput;
+  updateDisplay();
+}
+
+function percent() {
+  const v = parseFloat(currentInput) / 100;
+  currentInput = formatNumber(v);
+  updateDisplay();
+}
+
+function calculate(a, b, op) {
+  switch (op) {
+    case '+': return a + b;
+    case '-': return a - b;
+    case '*': return a * b;
+    case '/':
+      if (b === 0) { showError('errDivZero'); return null; }
+      return a / b;
+    case '^': return Math.pow(a, b);
+  }
+  return b;
+}
+
+function handleOp(op) {
+  const cur = parseFloat(currentInput);
+  if (pendingOperator && !shouldReset) {
+    const r = calculate(previousValue, cur, pendingOperator);
+    if (r === null) return;
+    previousValue = r;
+    currentInput  = formatNumber(r);
+  } else {
+    previousValue = cur;
+  }
+  pendingOperator = op;
+  shouldReset     = true;
+  lastExpression  = '';
+  updateDisplay();
+}
+
+function equals() {
+  while (parenStack.length > 0) closeParen(true);
+  if (pendingOperator === null || previousValue === null) return;
+  const b = parseFloat(currentInput);
+  const expr = formatNumber(previousValue) + OP_SYM[pendingOperator] + formatNumber(b);
+  const r = calculate(previousValue, b, pendingOperator);
+  if (r === null) return;
+  currentInput    = formatNumber(r);
+  previousValue   = null; pendingOperator = null;
+  shouldReset     = true;
+  lastExpression  = expr + ' =';
+  updateDisplay();
+}
+
+function openParen() {
+  parenStack.push({
+    input: currentInput, prevVal: previousValue,
+    pendingOp: pendingOperator, exprBefore: lastExpression
+  });
+  currentInput = '0'; previousValue = null; pendingOperator = null;
+  shouldReset = false; lastExpression = '';
+  updateDisplay();
+}
+
+function closeParen(silent) {
+  if (parenStack.length === 0) return;
+  let innerVal = parseFloat(currentInput);
+  if (pendingOperator && previousValue !== null) {
+    const r = calculate(previousValue, innerVal, pendingOperator);
+    if (r === null) return;
+    innerVal = r;
+  }
+  const frame = parenStack.pop();
+  currentInput = formatNumber(innerVal);
+  previousValue = frame.prevVal;
+  pendingOperator = frame.pendingOp;
+  lastExpression = '';
+  shouldReset = false;
+  if (!silent) updateDisplay();
+}
+
+function toRad(x) { return degMode ? x * Math.PI / 180 : x; }
+
+function factorial(n) {
+  if (n < 0 || !Number.isInteger(n)) return NaN;
+  if (n > 170) return Infinity;
+  let r = 1;
+  for (let i = 2; i <= n; i++) r *= i;
+  return r;
+}
+
+function applyFn(fn) {
+  const x = parseFloat(currentInput);
+  let r, expr = '';
+  switch (fn) {
+    case 'sin': r = Math.sin(toRad(x)); expr = `sin(${formatNumber(x)})`; break;
+    case 'cos': r = Math.cos(toRad(x)); expr = `cos(${formatNumber(x)})`; break;
+    case 'tan': r = Math.tan(toRad(x)); expr = `tan(${formatNumber(x)})`; break;
+    case 'ln':
+      if (x <= 0) { showError('errInvalid'); return; }
+      r = Math.log(x); expr = `ln(${formatNumber(x)})`; break;
+    case 'log':
+      if (x <= 0) { showError('errInvalid'); return; }
+      r = Math.log10(x); expr = `log(${formatNumber(x)})`; break;
+    case 'sqrt':
+      if (x < 0) { showError('errInvalid'); return; }
+      r = Math.sqrt(x); expr = `√(${formatNumber(x)})`; break;
+    case 'x2': r = x * x; expr = `(${formatNumber(x)})²`; break;
+    case 'fact':
+      r = factorial(x);
+      if (!isFinite(r) || Number.isNaN(r)) { showError('errInvalid'); return; }
+      expr = `${formatNumber(x)}!`; break;
+    case 'inv':
+      if (x === 0) { showError('errDivZero'); return; }
+      r = 1 / x; expr = `1/(${formatNumber(x)})`; break;
+    case 'abs': r = Math.abs(x); expr = `|${formatNumber(x)}|`; break;
+    default: return;
+  }
+  if (Number.isNaN(r) || !isFinite(r)) { showError('errInvalid'); return; }
+  currentInput = formatNumber(r);
+  lastExpression = expr + ' =';
+  shouldReset = true;
+  updateDisplay();
+}
+
+function toggleDeg() {
+  degMode = !degMode;
+  updateDegButton();
+  try { localStorage.setItem('dc_deg', degMode ? '1' : '0'); } catch(e){}
+}
+
+function updateDegButton() {
+  document.querySelectorAll('[data-action="toggleDeg"]').forEach(btn => {
+    btn.textContent = degMode ? 'DEG' : 'RAD';
+    btn.classList.toggle('active', degMode);
+  });
+}
+
+/* ================================================================
+   6. EVENTOS DE BOTONES
+   ================================================================ */
+function handleBtnClick(e) {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  switch (action) {
+    case 'num':      inputNum(btn.dataset.num); break;
+    case 'op':       handleOp(btn.dataset.op);  break;
+    case 'equals':   equals();                  break;
+    case 'clear':    clearAll();                break;
+    case 'back':     backspace();               break;
+    case 'sign':     toggleSign();              break;
+    case 'percent':  percent();                 break;
+    case 'fn':       applyFn(btn.dataset.fn);   break;
+    case 'const':    inputConst(btn.dataset.const); break;
+    case 'paren':
+      if (btn.dataset.paren === 'open') openParen();
+      else closeParen();
+      break;
+    case 'toggleDeg': toggleDeg(); break;
+  }
+}
+
+document.getElementById('normalButtons').addEventListener('click', handleBtnClick);
+document.getElementById('sciButtons').addEventListener('click', handleBtnClick);
+
+/* ================================================================
+   7. TECLADO FÍSICO
+   ================================================================ */
+document.addEventListener('keydown', (e) => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+
+  const k = e.key;
+  if (/^[0-9]$/.test(k)) { inputNum(k); e.preventDefault(); return; }
+  if (k === '.')     { inputNum('.'); e.preventDefault(); return; }
+  if (k === '+' || k === '-' || k === '*' || k === '/') {
+    handleOp(k); e.preventDefault(); return;
+  }
+  if (currentMode === 'scientific') {
+    if (k === '^') { handleOp('^'); e.preventDefault(); return; }
+    if (k === '(') { openParen();  e.preventDefault(); return; }
+    if (k === ')') { closeParen(); e.preventDefault(); return; }
+    if (k === 's') { applyFn('sin');  e.preventDefault(); return; }
+    if (k === 'c') { applyFn('cos');  e.preventDefault(); return; }
+    if (k === 't') { applyFn('tan');  e.preventDefault(); return; }
+    if (k === 'q') { applyFn('sqrt'); e.preventDefault(); return; }
+    if (k === 'p') { inputConst('pi'); e.preventDefault(); return; }
+  }
+  if (k === 'Enter' || k === '=') { equals();  e.preventDefault(); return; }
+  if (k === 'Escape')             { clearAll(); e.preventDefault(); return; }
+  if (k === 'Backspace')          { backspace(); e.preventDefault(); return; }
+  if (k === '%')                  { percent();  e.preventDefault(); return; }
+});
+
+/* ================================================================
+   8. IDIOMA
+   ================================================================ */
+function setLanguage(lang) {
+  currentLang = lang;
+  const t = I18N[lang];
+
+  document.getElementById('appSubtitle').textContent = t.subtitle;
+  document.getElementById('lblMode').textContent     = t.mode;
+  document.getElementById('lblLang').textContent     = t.lang;
+  document.getElementById('lblTheme').textContent    = t.theme;
+
+  const modeSel = document.getElementById('modeSelect');
+  for (const opt of modeSel.options) {
+    if (t.modes[opt.value]) opt.textContent = t.modes[opt.value];
+  }
+
+  const themeSel = document.getElementById('themeSelect');
+  for (const opt of themeSel.options) {
+    if (t.themes[opt.value]) opt.textContent = t.themes[opt.value];
+  }
+
+  document.getElementById('customTitle').textContent   = t.customTitle;
+  document.getElementById('lblCalcBg').textContent     = t.calcBg;
+  document.getElementById('lblCalcBorder').textContent = t.calcBorder;
+  document.getElementById('lblDisplayBg').textContent  = t.displayBg;
+  document.getElementById('lblDisplayFg').textContent  = t.displayFg;
+  document.getElementById('lblNumBg').textContent      = t.numBg;
+  document.getElementById('lblNumFg').textContent      = t.numFg;
+  document.getElementById('lblOpBg').textContent       = t.opBg;
+  document.getElementById('lblOpFg').textContent       = t.opFg;
+  document.getElementById('lblFnBg').textContent       = t.fnBg;
+  document.getElementById('lblFnFg').textContent       = t.fnFg;
+  document.getElementById('lblSciBg').textContent      = t.sciBg;
+  document.getElementById('lblSciFg').textContent      = t.sciFg;
+  document.getElementById('lblRadius').textContent     = t.radius;
+  document.getElementById('btnReset').textContent      = t.reset;
+  document.getElementById('btnSave').textContent       = t.save;
+
+  // Modal renombrar
+  document.getElementById('rnTitle').textContent         = t.renameTitle;
+  document.getElementById('rnNameLabel').textContent     = t.renameNameLabel;
+  document.getElementById('rnCancel').textContent        = t.renameCancel;
+  document.getElementById('rnConfirm').textContent       = t.renameConfirm;
+  document.getElementById('btnRename').title             = t.renameBtnTitle;
+  document.getElementById('renameNameInput').placeholder = t.renamePlaceholder;
+
+  // Modal descargar
+  document.getElementById('dlTitle').textContent      = t.downloadTitle;
+  document.getElementById('dlNameLabel').textContent  = t.downloadNameLabel;
+  document.getElementById('dlHintText').textContent   = t.downloadHintText;
+  document.getElementById('dlCancel').textContent     = t.downloadCancel;
+  document.getElementById('dlConfirm').textContent    = t.downloadConfirm;
+  document.getElementById('btnDownload').title        = t.downloadBtnTitle;
+  document.getElementById('downloadNameInput').placeholder = t.downloadNamePlaceholder;
+
+  document.documentElement.lang = lang;
+  try { localStorage.setItem('dc_lang', lang); } catch(e){}
+}
+
+/* ================================================================
+   9. MODO
+   ================================================================ */
+function setMode(mode) {
+  currentMode = mode;
+  try { localStorage.setItem('dc_mode', mode); } catch(e){}
+  const normalDiv = document.getElementById('normalButtons');
+  const sciDiv    = document.getElementById('sciButtons');
+  const app       = document.getElementById('app');
+  if (mode === 'scientific') {
+    normalDiv.style.display = 'none';
+    sciDiv.style.display    = 'grid';
+    app.classList.add('wide');
+  } else {
+    normalDiv.style.display = 'grid';
+    sciDiv.style.display    = 'none';
+    app.classList.remove('wide');
+  }
+  clearAll();
+}
+
+/* ================================================================
+   10. NOMBRE (renombrar)
+   ================================================================ */
+function getCurrentAppName() {
+  const h1 = document.getElementById('appTitle');
+  if (h1 && h1.textContent.trim()) return h1.textContent.trim();
+  return DEFAULT_APP_NAME;
+}
+
+function applyAppName(name) {
+  const clean = (name || '').trim() || DEFAULT_APP_NAME;
+  document.getElementById('appTitle').textContent = clean;
+  document.getElementById('logoEl').title = clean;
+  document.title = clean;
+  try { localStorage.setItem(APP_NAME_KEY, clean); } catch (e) {}
+}
+
+const renameModal = document.getElementById('renameModal');
+const renameInput = document.getElementById('renameNameInput');
+
+function openRenameModal() {
+  renameInput.value = getCurrentAppName();
+  renameModal.classList.add('open');
+  setTimeout(() => {
+    renameInput.focus();
+    renameInput.select();
+  }, 60);
+}
+
+function closeRenameModal() {
+  renameModal.classList.remove('open');
+}
+
+function performRename() {
+  const newName = renameInput.value.trim();
+  if (!newName) { renameInput.focus(); return; }
+
+  applyAppName(newName);
+  closeRenameModal();
+
+  // Feedback visual en el botón ✏️
+  const btn = document.getElementById('btnRename');
+  const orig = btn.textContent;
+  btn.textContent = '✓';
+  btn.classList.add('saved');
+  setTimeout(() => {
+    btn.textContent = orig;
+    btn.classList.remove('saved');
+  }, 1000);
+}
+
+document.getElementById('btnRename').addEventListener('click', openRenameModal);
+document.getElementById('rnCancel').addEventListener('click', closeRenameModal);
+document.getElementById('rnConfirm').addEventListener('click', performRename);
+renameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter')  { e.preventDefault(); performRename(); }
+  if (e.key === 'Escape') { e.preventDefault(); closeRenameModal(); }
+});
+renameModal.addEventListener('click', (e) => {
+  if (e.target === renameModal) closeRenameModal();
+});
+
+/* ================================================================
+   11. DESCARGA COMO HTML
+   ================================================================ */
+const downloadModal = document.getElementById('downloadModal');
+const downloadInput = document.getElementById('downloadNameInput');
+const filenamePrev  = document.getElementById('dlFilenamePreview');
+
+function getDefaultAppName() {
+  let stored = '';
+  try { stored = localStorage.getItem(APP_NAME_KEY) || ''; } catch (e) {}
+  if (stored.trim()) return stored.trim();
+  return getCurrentAppName() || DEFAULT_APP_NAME;
+}
+
+function toSafeFilename(name) {
+  let s = (name || '').trim()
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/^\.+/, '')
+    .replace(/[.\s]+$/, '');
+  if (!s) s = 'calculadora';
+  return s.slice(0, 80);
+}
+
+function updateFilenamePreview() {
+  const name = downloadInput.value.trim() || 'mi_calculadora';
+  filenamePrev.textContent = toSafeFilename(name) + '.html';
+}
+
+function openDownloadModal() {
+  downloadInput.value = getDefaultAppName();
+  updateFilenamePreview();
+  downloadModal.classList.add('open');
+  setTimeout(() => {
+    downloadInput.focus();
+    downloadInput.select();
+  }, 60);
+}
+
+function closeDownloadModal() {
+  downloadModal.classList.remove('open');
+}
+
+function performDownload() {
+  const rawName = downloadInput.value.trim();
+  if (!rawName) { downloadInput.focus(); return; }
+  const finalName = rawName;
+
+  // 1) Clonar
+  const clone = document.documentElement.cloneNode(true);
+  clone.removeAttribute('style');
+
+  // 2) <title>, <h1>, tooltip del logo
+  const titleEl = clone.querySelector('title');
+  if (titleEl) titleEl.textContent = finalName;
+
+  const h1El = clone.querySelector('#appTitle');
+  if (h1El) h1El.textContent = finalName;
+
+  const logoEl = clone.querySelector('#logoEl');
+  if (logoEl) logoEl.title = finalName;
+
+  // 3) Cerrar modales y limpiar inputs en el clon
+  ['#downloadModal', '#renameModal'].forEach(sel => {
+    const m = clone.querySelector(sel);
+    if (m) m.classList.remove('open');
+  });
+
+  ['#downloadNameInput', '#renameNameInput'].forEach(sel => {
+    const inp = clone.querySelector(sel);
+    if (inp) {
+      inp.removeAttribute('value');
+      inp.value = '';
+    }
+  });
+
+  // 4) Inyectar la configuración actual en localStorage
+  const bootstrapConfig = {
+    dc_lang: currentLang,
+    dc_theme: currentTheme,
+    dc_mode: currentMode,
+    dc_deg: degMode ? '1' : '0',
+    dc_app_name: finalName
+  };
+
+  if (currentTheme === 'custom') {
+    bootstrapConfig.dc_custom = JSON.stringify(customColors);
+  } else if (savedCustom) {
+    bootstrapConfig.dc_custom = JSON.stringify(savedCustom);
+  }
+
+  const bootstrapLines = [];
+  for (const k in bootstrapConfig) {
+    bootstrapLines.push(
+      "localStorage.setItem(" + JSON.stringify(k) + ", " +
+      JSON.stringify(bootstrapConfig[k]) + ");"
+    );
+  }
+
+  const bootstrapScript = document.createElement('script');
+  bootstrapScript.textContent = "try{" + bootstrapLines.join("") + "}catch(e){}";
+
+  const bodyClone = clone.querySelector('body');
+  if (bodyClone) bodyClone.insertBefore(bootstrapScript, bodyClone.firstChild);
+
+  // 5) Serializar y descargar
+  const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = toSafeFilename(finalName) + '.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+  // 6) Guardar nombre también en la app actual
+  applyAppName(finalName);
+
+  // 7) Feedback
+  const btn = document.getElementById('btnDownload');
+  const originalHTML = btn.textContent;
+  btn.textContent = '✓';
+  btn.classList.add('saved');
+  setTimeout(() => {
+    btn.textContent = originalHTML;
+    btn.classList.remove('saved');
+  }, 1400);
+
+  closeDownloadModal();
+}
+
+document.getElementById('btnDownload').addEventListener('click', openDownloadModal);
+document.getElementById('dlCancel').addEventListener('click', closeDownloadModal);
+document.getElementById('dlConfirm').addEventListener('click', performDownload);
+downloadInput.addEventListener('input', updateFilenamePreview);
+downloadInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter')  { e.preventDefault(); performDownload(); }
+  if (e.key === 'Escape') { e.preventDefault(); closeDownloadModal(); }
+});
+downloadModal.addEventListener('click', (e) => {
+  if (e.target === downloadModal) closeDownloadModal();
+});
+
+/* ================================================================
+   12. INICIALIZACIÓN
+   ================================================================ */
+function init() {
+  const savedLang    = (() => { try { return localStorage.getItem('dc_lang'); } catch(e){ return null; } })() || 'es';
+  const savedTheme   = (() => { try { return localStorage.getItem('dc_theme'); } catch(e){ return null; } })() || 'default';
+  const savedMode    = (() => { try { return localStorage.getItem('dc_mode'); } catch(e){ return null; } })() || 'normal';
+  const savedCustomJSON = (() => { try { return localStorage.getItem('dc_custom'); } catch(e){ return null; } })();
+  const savedDeg     = (() => { try { return localStorage.getItem('dc_deg'); } catch(e){ return null; } })();
+  const savedName    = (() => { try { return localStorage.getItem(APP_NAME_KEY); } catch(e){ return null; } })();
+
+  if (savedCustomJSON) {
+    try { savedCustom = JSON.parse(savedCustomJSON); } catch (e) {}
+  }
+  if (savedDeg === '0') degMode = false;
+
+  // Nombre guardado → aplicar al h1, title, tooltip del logo
+  if (savedName && savedName.trim()) {
+    applyAppName(savedName.trim());
+  } else {
+    // Sincronizar el nombre visible con localStorage la primera vez
+    applyAppName(getCurrentAppName());
+  }
+
+  document.getElementById('langSelect').value  = savedLang;
+  document.getElementById('themeSelect').value = savedTheme;
+  document.getElementById('modeSelect').value  = savedMode;
+  currentTheme = savedTheme;
+
+  setLanguage(savedLang);
+  setMode(savedMode);
+
+  if (savedTheme === 'custom') {
+    if (savedCustom) customColors = { ...savedCustom };
+    applyThemeVars(customColors);
+  } else {
+    applyTheme(savedTheme);
+  }
+
+  syncColorInputs();
+  updateDegButton();
+  updateDisplay();
+  updateFilenamePreview();
+
+  document.getElementById('customPanel')
+          .classList.toggle('open', savedTheme === 'custom');
+}
+
+/* ================================================================
+   13. CONTROLES DE INTERFAZ
+   ================================================================ */
+document.getElementById('modeSelect').addEventListener('change', (e) => {
+  setMode(e.target.value);
+});
+
+document.getElementById('langSelect').addEventListener('change', (e) => {
+  setLanguage(e.target.value);
+  updateDisplay();
+});
+
+document.getElementById('themeSelect').addEventListener('change', (e) => {
+  currentTheme = e.target.value;
+  try { localStorage.setItem('dc_theme', currentTheme); } catch(err){}
+  const panel = document.getElementById('customPanel');
+  if (currentTheme === 'custom') {
+    panel.classList.add('open');
+    if (savedCustom) customColors = { ...savedCustom };
+    applyThemeVars(customColors);
+    syncColorInputs();
+  } else {
+    panel.classList.remove('open');
+    applyTheme(currentTheme);
+  }
+});
+
+const colorIds = [
+  ['cCalcBg','calcBg'], ['cCalcBorder','calcBorder'],
+  ['cDisplayBg','displayBg'], ['cDisplayFg','displayFg'],
+  ['cNumBg','numBg'], ['cNumFg','numFg'],
+  ['cOpBg','opBg'], ['cOpFg','opFg'],
+  ['cFnBg','fnBg'], ['cFnFg','fnFg'],
+  ['cSciBg','sciBg'], ['cSciFg','sciFg']
+];
+colorIds.forEach(([id, key]) => {
+  document.getElementById(id).addEventListener('input', (e) => {
+    customColors[key] = e.target.value;
+    applyThemeVars(customColors);
+  });
+});
+
+document.getElementById('cRadius').addEventListener('input', (e) => {
+  customColors.radius = parseInt(e.target.value);
+  document.getElementById('radiusVal').textContent = e.target.value + 'px';
+  applyThemeVars(customColors);
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  customColors = { ...THEMES.default };
+  applyThemeVars(customColors);
+  syncColorInputs();
+  try { localStorage.removeItem('dc_custom'); } catch(e){}
+  savedCustom = null;
+});
+
+document.getElementById('btnSave').addEventListener('click', () => {
+  savedCustom = { ...customColors };
+  try { localStorage.setItem('dc_custom', JSON.stringify(savedCustom)); } catch(e){}
+  const btn = document.getElementById('btnSave');
+  const orig = btn.textContent;
+  btn.textContent = '✓ ' + I18N[currentLang].saved;
+  setTimeout(() => { btn.textContent = orig; }, 1200);
+});
+
+init();
+</script>
+</body>
+</html>
